@@ -57,6 +57,7 @@
         // --- --- --- --- --- --- --- --- --- --- --- --- --- ---
         // --- IMPORTANT: PASTE YOUR ZAPIER WEBHOOK URL BELOW ---
         // --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+        // This URL should be the one you provided.
         const ZAPIER_WEBHOOK_URL = 'https://hooks.zapier.com/hooks/catch/22738539/2pqq1ux/';
         // --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
@@ -102,8 +103,9 @@
                 return; // Stop the function if validation fails
             }
 
-            // 4. Validate: Check if the Zapier URL has been set
-            if (!ZAPIER_WEBHOOK_URL || ZAPIER_WEBHOOK_URL === 'https://hooks.zapier.com/hooks/catch/22738539/2pqq1ux/') {
+            // 4. Validate: Check if the Zapier URL still contains the placeholder
+            //    *** THIS IS THE CORRECTED LINE ***
+            if (!ZAPIER_WEBHOOK_URL || ZAPIER_WEBHOOK_URL === 'YOUR_ZAPIER_WEBHOOK_URL_HERE') {
                 console.error("Zapier Webhook URL is not configured in the script!");
                 displayMessage('Configuration error: Webhook URL not set.', 'error');
                 // Optionally alert the developer/user more directly during setup
@@ -153,6 +155,7 @@
             .catch(error => {
                 // Handle any errors that occurred during the fetch process or from the server
                 console.error('Error sending data to Zapier:', error);
+                // Display the actual error message from the fetch failure
                 displayMessage(`Error: Could not send keyword. ${error.message}`, 'error');
             })
             .finally(() => {
