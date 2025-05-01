@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Story Keyword Trigger</title>
+    <title>Story Keyword Trigger & Display</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         // Optional: You can customize Tailwind theme here if needed
@@ -22,12 +22,23 @@
         body {
             font-family: 'Inter', sans-serif; /* Apply Inter font */
         }
+        /* Style for the story display area */
+        #storyOutput {
+            white-space: pre-wrap; /* Preserve whitespace and line breaks from the story */
+            text-align: left;
+            background-color: #f9f9f9;
+            border: 1px solid #eee;
+            padding: 15px;
+            border-radius: 6px;
+            margin-top: 20px;
+            min-height: 50px; /* Reserve some space */
+        }
     </style>
 </head>
 <body class="bg-gray-100 flex items-center justify-center min-h-screen p-4">
 
-    <div class="bg-white p-8 rounded-lg shadow-md w-full max-w-md text-center">
-        <h1 class="text-2xl font-semibold mb-6 text-gray-700">Enter Your Story Keyword</h1>
+    <div class="bg-white p-8 rounded-lg shadow-md w-full max-w-md">
+        <h1 class="text-2xl font-semibold mb-6 text-gray-700 text-center">Enter Your Story Keyword</h1>
 
         <form id="storyForm" class="space-y-4">
             <div>
@@ -47,34 +58,37 @@
                 id="submitButton"
                 class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition duration-150 ease-in-out disabled:opacity-50 disabled:cursor-not-allowed"
             >
-                Submit to Zapier
+                Generate Story
             </button>
         </form>
 
-        <p id="statusMessage" class="mt-4 text-sm min-h-[1.2em]"></p> </div>
+        <p id="statusMessage" class="mt-4 text-sm min-h-[1.2em] text-center"></p>
+
+        <div id="storyOutput" class="hidden">
+             </div>
+
+    </div>
 
     <script>
-        // --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-        // --- IMPORTANT: PASTE YOUR ZAPIER WEBHOOK URL BELOW ---
-        // --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-        // This URL should be the one you provided.
+        // --- ZAPIER WEBHOOK URL ---
         const ZAPIER_WEBHOOK_URL = 'https://hooks.zapier.com/hooks/catch/22738539/2pqq1ux/';
-        // --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+        // --- --- --- --- --- --- ---
 
-        // Get references to the HTML elements we need to interact with
+        // Get references to HTML elements
         const storyForm = document.getElementById('storyForm');
         const keywordInput = document.getElementById('storyKeyword');
         const statusMessage = document.getElementById('statusMessage');
         const submitButton = document.getElementById('submitButton');
+        const storyOutputDiv = document.getElementById('storyOutput'); // Get the story display div
 
         /**
-         * Displays a message to the user in the status area.
+         * Displays a status message to the user.
          * @param {string} message - The text message to display.
          * @param {'success' | 'error' | 'info'} type - The type of message (for styling).
          */
-        function displayMessage(message, type) {
+        function displayStatusMessage(message, type) {
             statusMessage.textContent = message;
-            statusMessage.className = 'mt-4 text-sm min-h-[1.2em] '; // Reset classes
+            statusMessage.className = 'mt-4 text-sm min-h-[1.2em] text-center '; // Reset classes
             switch (type) {
                 case 'success':
                     statusMessage.classList.add('text-green-600');
@@ -89,78 +103,80 @@
             }
         }
 
-        // Add an event listener to the form that triggers when it's submitted
+        // Add event listener for form submission
         storyForm.addEventListener('submit', function(event) {
-            // 1. Prevent the default browser behavior of submitting the form (which causes a page reload)
-            event.preventDefault();
-
-            // 2. Get the keyword value from the input field and remove leading/trailing whitespace
+            event.preventDefault(); // Prevent page reload
             const keyword = keywordInput.value.trim();
 
-            // 3. Validate: Check if the keyword is empty
             if (!keyword) {
-                displayMessage('Please enter a keyword.', 'error');
-                return; // Stop the function if validation fails
+                displayStatusMessage('Please enter a keyword.', 'error');
+                return;
             }
 
-            // 4. Validate: Check if the Zapier URL still contains the placeholder
-            //    *** THIS IS THE CORRECTED LINE ***
+            // Basic check for placeholder URL
             if (!ZAPIER_WEBHOOK_URL || ZAPIER_WEBHOOK_URL === 'YOUR_ZAPIER_WEBHOOK_URL_HERE') {
-                console.error("Zapier Webhook URL is not configured in the script!");
-                displayMessage('Configuration error: Webhook URL not set.', 'error');
-                // Optionally alert the developer/user more directly during setup
-                // alert("Developer Error: Please paste the Zapier Webhook URL into the script section of the HTML file.");
-                return; // Stop the function
+                console.error("Zapier Webhook URL is not configured!");
+                displayStatusMessage('Configuration error: Webhook URL not set.', 'error');
+                return;
             }
 
-            // 5. Prepare the data payload to send to Zapier
-            // Zapier's "Catch Hook" is flexible, but sending JSON is common.
+            // Prepare data to send
             const dataToSend = {
-                story_keyword: keyword, // The key name ('story_keyword') is how you'll refer to it in Zapier
-                submitted_at: new Date().toISOString() // Optional: Add a timestamp
+                story_keyword: keyword,
+                submitted_at: new Date().toISOString()
             };
 
-            // 6. Provide visual feedback and disable the button
-            displayMessage('Sending keyword to Zapier...', 'info');
+            // --- Update UI for loading state ---
+            displayStatusMessage('Generating story with Zapier & Gemini... Please wait.', 'info');
             submitButton.disabled = true;
+            storyOutputDiv.classList.add('hidden'); // Hide previous story output
+            storyOutputDiv.textContent = ''; // Clear previous story text
 
-            // 7. Send the data using the Fetch API
+            // --- Send data using Fetch API ---
             fetch(ZAPIER_WEBHOOK_URL, {
-                method: 'POST', // Use the POST method to send data
-                // Zapier Catch Hooks usually don't strictly require headers,
-                // but Content-Type is good practice when sending JSON.
+                method: 'POST',
                 headers: {
                    'Content-Type': 'application/json',
                 },
-                // Convert the JavaScript object into a JSON string for the request body
                 body: JSON.stringify(dataToSend)
             })
             .then(response => {
                 // Check if the response status code indicates success (e.g., 200 OK)
                 if (response.ok) {
-                    // If successful, Zapier usually sends back a success status
-                    return response.json(); // Parse the JSON response from Zapier
+                    // If successful, parse the JSON response FROM ZAPIER (expecting the story)
+                    return response.json();
                 } else {
-                    // If the response status indicates an error, create an error to be caught
-                    // Try to include the status text for more context
-                    throw new Error(`Network response was not ok: ${response.status} ${response.statusText}`);
+                    // If the response status indicates an error (e.g., Zap error, timeout)
+                    // Try to get text for better error message
+                    return response.text().then(text => {
+                         throw new Error(`Zapier response error: ${response.status} ${response.statusText}. ${text}`);
+                    });
                 }
             })
             .then(data => {
-                // Handle the successful response from Zapier
-                console.log('Zapier response:', data); // Log the response for debugging
-                displayMessage(`Keyword "${keyword}" sent successfully!`, 'success');
-                keywordInput.value = ''; // Clear the input field after successful submission
+                // --- Handle the successful response containing the story ---
+                console.log('Zapier response data:', data);
+
+                // Check if the expected 'story' field exists in the response data
+                if (data && data.story) {
+                    storyOutputDiv.textContent = data.story; // Display the story
+                    storyOutputDiv.classList.remove('hidden'); // Make the div visible
+                    displayStatusMessage('Story generated successfully!', 'success');
+                    keywordInput.value = ''; // Clear input field
+                } else {
+                    // Handle cases where the response format is unexpected
+                    console.error('Unexpected response format from Zapier:', data);
+                    throw new Error('Received response from Zapier, but story data was missing.');
+                }
             })
             .catch(error => {
-                // Handle any errors that occurred during the fetch process or from the server
-                console.error('Error sending data to Zapier:', error);
-                // Display the actual error message from the fetch failure
-                displayMessage(`Error: Could not send keyword. ${error.message}`, 'error');
+                // --- Handle errors during fetch or response processing ---
+                console.error('Error during story generation:', error);
+                displayStatusMessage(`Error: ${error.message}`, 'error');
+                storyOutputDiv.classList.add('hidden'); // Ensure story div is hidden on error
             })
             .finally(() => {
-                // This block executes regardless of success or failure
-                // Re-enable the submit button so the user can try again if needed
+                // --- Re-enable button regardless of success/failure ---
                 submitButton.disabled = false;
             });
         });
