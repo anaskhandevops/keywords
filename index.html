@@ -135,10 +135,11 @@
             // --- Send data using Fetch API ---
             fetch(ZAPIER_WEBHOOK_URL, {
                 method: 'POST',
-                headers: {
-                   'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(dataToSend)
+                // *** REMOVED Content-Type HEADER TO AVOID CORS PREFLIGHT ISSUE ***
+                // headers: {
+                //    'Content-Type': 'application/json',
+                // },
+                body: JSON.stringify(dataToSend) // Zapier should still parse this JSON body
             })
             .then(response => {
                 // Check if the response status code indicates success (e.g., 200 OK)
@@ -172,6 +173,7 @@
             .catch(error => {
                 // --- Handle errors during fetch or response processing ---
                 console.error('Error during story generation:', error);
+                // Display the actual error message from the fetch failure (will likely show CORS error if this fix doesn't work)
                 displayStatusMessage(`Error: ${error.message}`, 'error');
                 storyOutputDiv.classList.add('hidden'); // Ensure story div is hidden on error
             })
@@ -185,3 +187,5 @@
 
 </body>
 </html>
+```
+
