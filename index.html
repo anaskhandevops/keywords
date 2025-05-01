@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Story Keyword Trigger</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        // Optional: You can customize Tailwind theme here if needed
+        tailwind.config = {
+          theme: {
+            extend: {
+              fontFamily: {
+                sans: ['Inter', 'sans-serif'], // Use Inter font
+              },
+            }
+          }
+        }
+    </script>
+    <style>
+        /* Add custom styles if needed, but prefer Tailwind classes */
+        body {
+            font-family: 'Inter', sans-serif; /* Apply Inter font */
+        }
+    </style>
+</head>
+<body class="bg-gray-100 flex items-center justify-center min-h-screen p-4">
+
+    <div class="bg-white p-8 rounded-lg shadow-md w-full max-w-md text-center">
+        <h1 class="text-2xl font-semibold mb-6 text-gray-700">Enter Your Story Keyword</h1>
+
+        <form id="storyForm" class="space-y-4">
+            <div>
+                <label for="storyKeyword" class="block text-sm font-medium text-gray-600 mb-1 text-left">Keyword:</label>
+                <input
+                    type="text"
+                    id="storyKeyword"
+                    name="storyKeyword"
+                    placeholder="e.g., dragon, space, mystery"
+                    required
+                    class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 transition duration-150 ease-in-out"
+                >
+            </div>
+
+            <button
+                type="submit"
+                id="submitButton"
+                class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition duration-150 ease-in-out disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+                Submit to Zapier
+            </button>
+        </form>
+
+        <p id="statusMessage" class="mt-4 text-sm min-h-[1.2em]"></p> </div>
+
+    <script>
+        // --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+        // --- IMPORTANT: PASTE YOUR ZAPIER WEBHOOK URL BELOW ---
+        // --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+        const ZAPIER_WEBHOOK_URL = 'https://hooks.zapier.com/hooks/catch/22738539/2pqq1ux/';
+        // --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+        // Get references to the HTML elements we need to interact with
+        const storyForm = document.getElementById('storyForm');
+        const keywordInput = document.getElementById('storyKeyword');
+        const statusMessage = document.getElementById('statusMessage');
+        const submitButton = document.getElementById('submitButton');
+
+        /**
+         * Displays a message to the user in the status area.
+         * @param {string} message - The text message to display.
+         * @param {'success' | 'error' | 'info'} type - The type of message (for styling).
+         */
+        function displayMessage(message, type) {
+            statusMessage.textContent = message;
+            statusMessage.className = 'mt-4 text-sm min-h-[1.2em] '; // Reset classes
+            switch (type) {
+                case 'success':
+                    statusMessage.classList.add('text-green-600');
+                    break;
+                case 'error':
+                    statusMessage.classList.add('text-red-600');
+                    break;
+                case 'info':
+                default:
+                    statusMessage.classList.add('text-gray-600');
+                    break;
+            }
+        }
+
+        // Add an event listener to the form that triggers when it's submitted
+        storyForm.addEventListener('submit', function(event) {
+            // 1. Prevent the default browser behavior of submitting the form (which causes a page reload)
+            event.preventDefault();
+
+            // 2. Get the keyword value from the input field and remove leading/trailing whitespace
+            const keyword = keywordInput.value.trim();
+
+            // 3. Validate: Check if the keyword is empty
+            if (!keyword) {
+                displayMessage('Please enter a keyword.', 'error');
+                return; // Stop the function if validation fails
+            }
+
+            // 4. Validate: Check if the Zapier URL has been set
+            if (!ZAPIER_WEBHOOK_URL || ZAPIER_WEBHOOK_URL === 'https://hooks.zapier.com/hooks/catch/22738539/2pqq1ux/') {
+                console.error("Zapier Webhook URL is not configured in the script!");
+                displayMessage('Configuration error: Webhook URL not set.', 'error');
+                // Optionally alert the developer/user more directly during setup
+                // alert("Developer Error: Please paste the Zapier Webhook URL into the script section of the HTML file.");
+                return; // Stop the function
+            }
+
+            // 5. Prepare the data payload to send to Zapier
+            // Zapier's "Catch Hook" is flexible, but sending JSON is common.
+            const dataToSend = {
+                story_keyword: keyword, // The key name ('story_keyword') is how you'll refer to it in Zapier
+                submitted_at: new Date().toISOString() // Optional: Add a timestamp
+            };
+
+            // 6. Provide visual feedback and disable the button
+            displayMessage('Sending keyword to Zapier...', 'info');
+            submitButton.disabled = true;
+
+            // 7. Send the data using the Fetch API
+            fetch(ZAPIER_WEBHOOK_URL, {
+                method: 'POST', // Use the POST method to send data
+                // Zapier Catch Hooks usually don't strictly require headers,
+                // but Content-Type is good practice when sending JSON.
+                headers: {
+                   'Content-Type': 'application/json',
+                },
+                // Convert the JavaScript object into a JSON string for the request body
+                body: JSON.stringify(dataToSend)
+            })
+            .then(response => {
+                // Check if the response status code indicates success (e.g., 200 OK)
+                if (response.ok) {
+                    // If successful, Zapier usually sends back a success status
+                    return response.json(); // Parse the JSON response from Zapier
+                } else {
+                    // If the response status indicates an error, create an error to be caught
+                    // Try to include the status text for more context
+                    throw new Error(`Network response was not ok: ${response.status} ${response.statusText}`);
+                }
+            })
+            .then(data => {
+                // Handle the successful response from Zapier
+                console.log('Zapier response:', data); // Log the response for debugging
+                displayMessage(`Keyword "${keyword}" sent successfully!`, 'success');
+                keywordInput.value = ''; // Clear the input field after successful submission
+            })
+            .catch(error => {
+                // Handle any errors that occurred during the fetch process or from the server
+                console.error('Error sending data to Zapier:', error);
+                displayMessage(`Error: Could not send keyword. ${error.message}`, 'error');
+            })
+            .finally(() => {
+                // This block executes regardless of success or failure
+                // Re-enable the submit button so the user can try again if needed
+                submitButton.disabled = false;
+            });
+        });
+
+    </script>
+
+</body>
+</html>
